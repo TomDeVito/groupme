@@ -251,17 +251,6 @@ func (ep *Endpoint) SendMessage(group *Group, text string) (*Message, error) {
 	msg := &Message{
 		SourceGuid: newSourceGuid(),
 		Text:       text,
-		Attachments: []Attachment{
-			{
-				Type: "mentions",
-				UserIds: []string{
-					"6566214",
-				},
-				Loci: []Locus{
-					{0, 12},
-				},
-			},
-		},
 	}
 
 	return ep.sendMessage(group, msg)
