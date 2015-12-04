@@ -9,7 +9,7 @@ import (
 	"github.com/jlubawy/groupme"
 )
 
-var ep *groupme.Endpoint
+var app *groupme.App
 var token = os.Getenv("GROUPME_TOKEN")
 
 var commands = []struct {
@@ -33,7 +33,7 @@ func main() {
 		usage()
 	}
 
-	ep = groupme.New(token)
+	app = groupme.NewApp(token)
 
 	for _, cmd := range commands {
 		if cmd.Name == os.Args[1] {
@@ -76,7 +76,7 @@ func cmdGroup() {
 }
 
 func cmdGroups() {
-	groups, err := ep.Groups()
+	groups, err := app.Groups()
 	if err != nil {
 		fatalf("%s", err)
 	}
@@ -87,7 +87,7 @@ func cmdGroups() {
 }
 
 func cmdUserMe() {
-	me, err := ep.GetUserMe()
+	me, err := app.GetUserMe()
 	if err != nil {
 		fatalf("%s", err)
 	}
@@ -115,7 +115,7 @@ func cmdMessage() {
 
 	line, _, _ := bufio.NewReader(os.Stdin).ReadLine()
 	if line != nil {
-		msg, err := ep.SendMessage(group, string(line))
+		msg, err := app.SendMessageText(group, string(line))
 		if err != nil {
 			fatalf("%s", err)
 		}
@@ -131,18 +131,18 @@ func cmdMessages() {
 
 	group := getGroup(os.Args[2])
 
-	msgs, err := ep.GetMessages(group, 100)
+	msgs, err := app.GetMessages(group, 100)
 	if err != nil {
 		fatalf("%s", err)
 	}
 
 	for _, msg := range msgs {
-		fmt.Printf("%s  %-16s  '%s'  %v\n", msg.Id, msg.Name, msg.Text, msg.Attachments)
+		fmt.Printf("%s  %-16s (%s)  '%s'  %v\n", msg.Id, msg.Name, msg.UserId, msg.Text, msg.Attachments)
 	}
 }
 
 func getGroup(id string) *groupme.Group {
-	group, err := ep.Group(id)
+	group, err := app.Group(id)
 	if err != nil {
 		fatalf("%s", err)
 	}

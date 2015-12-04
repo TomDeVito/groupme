@@ -10,6 +10,8 @@ import (
 	"code.google.com/p/go-uuid/uuid"
 )
 
+const apiUrl = "https://api.groupme.com/v3"
+
 const (
 	ImageType    AttachmentType = "image"
 	LocationType                = "location"
@@ -20,8 +22,7 @@ const (
 
 type AttachmentType string
 
-type Endpoint struct {
-	url   string
+type App struct {
 	token string
 }
 
@@ -112,15 +113,29 @@ type Message struct {
 	Attachments []Attachment `json:"attachments,omitempty"`
 }
 
-func New(token string) *Endpoint {
+type Bot struct {
+	id string
+}
 
-	return &Endpoint{
-		url:   "https://api.groupme.com/v3",
+type BotMessage struct {
+	BotId       string       `json:"bot_id"`
+	Text        string       `json:"text"`
+	Attachments []Attachment `json:"attachments,omitempty"`
+}
+
+func NewApp(token string) *App {
+	return &App{
 		token: token,
 	}
 }
 
-func (ep *Endpoint) Get(url string, respEnv interface{}) error {
+func NewBot(botId string) *Bot {
+	return &Bot{
+		id: botId,
+	}
+}
+
+func Get(url string, respEnv interface{}) error {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return err
@@ -145,17 +160,21 @@ func (ep *Endpoint) Get(url string, respEnv interface{}) error {
 	return json.Unmarshal(body, respEnv)
 }
 
-func (ep *Endpoint) Post(url string, data string, respEnv interface{}) error {
+func post(url string, data string) (*http.Response, error) {
 	req, err := http.NewRequest("POST", url, strings.NewReader(data))
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	req.Header = map[string][]string{
 		"Content-Type": {"application/json"},
 	}
 
-	resp, err := http.DefaultClient.Do(req)
+	return http.DefaultClient.Do(req)
+}
+
+func Post(url string, data string, respEnv interface{}) error {
+	resp, err := post(url, data)
 	if err != nil {
 		return err
 	}
@@ -170,37 +189,37 @@ func (ep *Endpoint) Post(url string, data string, respEnv interface{}) error {
 	return json.Unmarshal(body, respEnv)
 }
 
-func (ep *Endpoint) Groups() ([]*Group, error) {
+func (app *App) Groups() ([]*Group, error) {
 	respEnv := struct {
 		Groups []*Group `json:"response"`
 	}{}
 
-	err := ep.Get(ep.url+"/groups?token="+ep.token, &respEnv)
+	err := Get(apiUrl+"/groups?token="+app.token, &respEnv)
 
 	return respEnv.Groups, err
 }
 
-func (ep *Endpoint) FormerGroups() ([]Group, error) {
+func (app *App) FormerGroups() ([]Group, error) {
 	respEnv := struct {
 		Groups []Group `json:"response"`
 	}{}
 
-	err := ep.Get(ep.url+"/groups/former?token="+ep.token, &respEnv)
+	err := Get(apiUrl+"/groups/former?token="+app.token, &respEnv)
 
 	return respEnv.Groups, err
 }
 
-func (ep *Endpoint) Group(id string) (*Group, error) {
+func (app *App) Group(id string) (*Group, error) {
 	respEnv := struct {
 		Group Group `json:"response"`
 	}{}
 
-	err := ep.Get(ep.url+"/groups/"+id+"?token="+ep.token, &respEnv)
+	err := Get(apiUrl+"/groups/"+id+"?token="+app.token, &respEnv)
 
 	return &respEnv.Group, err
 }
 
-func (ep *Endpoint) GetMessages(group *Group, limit uint) ([]Message, error) {
+func (app *App) GetMessages(group *Group, limit uint) ([]Message, error) {
 	var limitStr string
 
 	respEnv := struct {
@@ -220,12 +239,12 @@ func (ep *Endpoint) GetMessages(group *Group, limit uint) ([]Message, error) {
 		limitStr = fmt.Sprintf("&limit=%d", limit)
 	}
 
-	err := ep.Get(ep.url+"/groups/"+group.GroupId+"/messages?after_id=144892901418689708&token="+ep.token+limitStr, &respEnv)
+	err := Get(apiUrl+"/groups/"+group.GroupId+"/messages?after_id=144892901418689708&token="+app.token+limitStr, &respEnv)
 
 	return respEnv.Response.Messages, err
 }
 
-func (ep *Endpoint) sendMessage(group *Group, msg *Message) (*Message, error) {
+func (app *App) SendMessage(group *Group, msg *Message) (*Message, error) {
 	msgBody := struct {
 		Message Message `json:"message"`
 	}{
@@ -243,26 +262,55 @@ func (ep *Endpoint) sendMessage(group *Group, msg *Message) (*Message, error) {
 		return nil, err
 	}
 
-	err = ep.Post(ep.url+"/groups/"+group.GroupId+"/messages?token="+ep.token, string(data), &respEnv)
+	err = Post(apiUrl+"/groups/"+group.GroupId+"/messages?token="+app.token, string(data), &respEnv)
 	return &respEnv.Response.Message, err
 }
 
-func (ep *Endpoint) SendMessage(group *Group, text string) (*Message, error) {
+func (app *App) SendMessageText(group *Group, text string) (*Message, error) {
 	msg := &Message{
-		SourceGuid: newSourceGuid(),
+		SourceGuid: NewSourceGuid(),
 		Text:       text,
 	}
 
-	return ep.sendMessage(group, msg)
+	return app.SendMessage(group, msg)
 }
 
-func (ep *Endpoint) GetUserMe() (*User, error) {
+func (app *App) GetUserMe() (*User, error) {
 	respEnv := struct {
 		Me User `json:"response"`
 	}{}
 
-	err := ep.Get(ep.url+"/users/me?token="+ep.token, &respEnv)
+	err := Get(apiUrl+"/users/me?token="+app.token, &respEnv)
 	return &respEnv.Me, err
+}
+
+func (bot *Bot) SendMessage(text string, attachments []Attachment) (*http.Response, error) {
+	msg := &BotMessage{
+		BotId:       bot.id,
+		Text:        text,
+		Attachments: attachments,
+	}
+
+	data, err := json.Marshal(msg)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", apiUrl+"/bots/post", strings.NewReader(string(data)))
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header = map[string][]string{
+		"Content-Type": {"application/json"},
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	return resp, err
 }
 
 func (group *Group) GetUser(userId string) *User {
@@ -295,6 +343,6 @@ func FindMessage(msgs []Message, id string) *Message {
 	return nil
 }
 
-func newSourceGuid() string {
+func NewSourceGuid() string {
 	return uuid.NewUUID().String()
 }
