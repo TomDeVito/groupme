@@ -137,7 +137,7 @@ func cmdMessages() {
 	}
 
 	for _, msg := range msgs {
-		fmt.Printf("%s  %-16s (%s)  '%s'  %v\n", msg.Id, msg.Name, msg.UserId, msg.Text, msg.Attachments)
+		fmt.Printf("%s [system %t] %-16s (%s)  '%s'  %v\n", msg.Id, msg.System, msg.Name, msg.UserId, msg.Text, msg.Attachments)
 	}
 }
 

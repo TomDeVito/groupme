@@ -12,6 +12,8 @@ import (
 
 const apiUrl = "https://api.groupme.com/v3"
 
+type AttachmentType string
+
 const (
 	ImageType    AttachmentType = "image"
 	LocationType                = "location"
@@ -20,7 +22,12 @@ const (
 	MentionsType                = "mentions"
 )
 
-type AttachmentType string
+type SenderType string
+
+const (
+	SenderUser SenderType = "user"
+	SenderBot             = "bot"
+)
 
 type App struct {
 	token string
@@ -111,10 +118,15 @@ type Message struct {
 	System      bool         `json:"system"`
 	FavoritedBy []string     `json:"favorited_by"`
 	Attachments []Attachment `json:"attachments,omitempty"`
+	SenderType  SenderType   `json:"sender_type"`
 }
 
 type Bot struct {
-	id string
+	BotId       string `json:"bot_id"`
+	GroupId     string `json:"group_id"`
+	Name        string `json:"name"`
+	AvatarUrl   string `json:"avatar_url"`
+	CallbackUrl string `json:"callback_url"`
 }
 
 type BotMessage struct {
@@ -126,12 +138,6 @@ type BotMessage struct {
 func NewApp(token string) *App {
 	return &App{
 		token: token,
-	}
-}
-
-func NewBot(botId string) *Bot {
-	return &Bot{
-		id: botId,
 	}
 }
 
@@ -189,6 +195,22 @@ func Post(url string, data string, respEnv interface{}) error {
 	return json.Unmarshal(body, respEnv)
 }
 
+func (app *App) GetBot(botId string) (*Bot, error) {
+	respEnv := struct {
+		Bots []Bot `json:"response"`
+	}{}
+
+	err := Get(apiUrl+"/bots?token="+app.token, &respEnv)
+
+	for i, _ := range respEnv.Bots {
+		if respEnv.Bots[i].BotId == botId {
+			return &respEnv.Bots[i], nil
+		}
+	}
+
+	return nil, err
+}
+
 func (app *App) Groups() ([]*Group, error) {
 	respEnv := struct {
 		Groups []*Group `json:"response"`
@@ -239,7 +261,7 @@ func (app *App) GetMessages(group *Group, limit uint) ([]Message, error) {
 		limitStr = fmt.Sprintf("&limit=%d", limit)
 	}
 
-	err := Get(apiUrl+"/groups/"+group.GroupId+"/messages?after_id=144892901418689708&token="+app.token+limitStr, &respEnv)
+	err := Get(apiUrl+"/groups/"+group.GroupId+"/messages?token="+app.token+limitStr, &respEnv)
 
 	return respEnv.Response.Messages, err
 }
@@ -286,7 +308,7 @@ func (app *App) GetUserMe() (*User, error) {
 
 func (bot *Bot) SendMessage(text string, attachments []Attachment) (*http.Response, error) {
 	msg := &BotMessage{
-		BotId:       bot.id,
+		BotId:       bot.BotId,
 		Text:        text,
 		Attachments: attachments,
 	}
