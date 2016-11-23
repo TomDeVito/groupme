@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"text/template"
 
 	"github.com/jlubawy/groupme"
 )
@@ -71,8 +72,42 @@ func cmdGroup() {
 	}
 
 	group := getGroup(os.Args[2])
-	fmt.Printf("%v\n", group)
+
+	if err := templGroup.Execute(os.Stdout, group); err != nil {
+		panic(err)
+	}
 }
+
+var templGroup = template.Must(template.New("").Parse(`
+Id            : {{.Id}}
+GroupId       : {{.GroupId}}
+Name          : {{.Name}}
+PhoneNumber   : {{.PhoneNumber}}
+Type          : {{.Type}}
+Description   : {{.Description}}
+ImageUrl      : {{.ImageUrl}}
+CreatorUserId : {{.CreatorUserId}}
+CreatedAt     : {{.CreatedAt}}
+UpdatedAt     : {{.UpdatedAt}}
+OfficeMode    : {{.OfficeMode}}
+ShareUrl      : {{.ShareUrl}}
+Members       : {{range .Members}}
+    * Id          : {{.Id}}
+      UserId      : {{.UserId}}
+      Name        : {{.Name}}
+      Nickname    : {{.Nickname}}
+      PhoneNumber : {{.PhoneNumber}}
+      Email       : {{.Email}}
+      Sms         : {{.Sms}}
+      ImageUrl    : {{.ImageUrl}}
+      Muted       : {{.Muted}}
+      Autokicked  : {{.Autokicked}}
+      CreatedAt   : {{.CreatedAt}}
+      UpdatedAt   : {{.UpdatedAt}}
+{{end}}
+Messages      : {{.Messages}}
+MaxMembers    : {{.MaxMembers}}
+`))
 
 func cmdGroups() {
 	groups, err := app.Groups()
