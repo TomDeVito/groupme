@@ -12,6 +12,12 @@ import (
 
 const apiUrl = "https://api.groupme.com/v3"
 
+var httpClient = http.DefaultClient
+
+func SetHttpClient(client *http.Client) {
+	httpClient = client
+}
+
 type AttachmentType string
 
 const (
@@ -151,7 +157,7 @@ func Get(url string, respEnv interface{}) error {
 		"Content-Type": {"application/json"},
 	}
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		return err
 	}
@@ -176,7 +182,7 @@ func post(url string, data string) (*http.Response, error) {
 		"Content-Type": {"application/json"},
 	}
 
-	return http.DefaultClient.Do(req)
+	return httpClient.Do(req)
 }
 
 func Post(url string, data string, respEnv interface{}) error {
@@ -327,7 +333,7 @@ func (bot *Bot) SendMessage(text string, attachments []Attachment) (*http.Respon
 		"Content-Type": {"application/json"},
 	}
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
