@@ -3,7 +3,6 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"log"
 	"os"
 
 	"github.com/jlubawy/groupme"
@@ -67,7 +66,7 @@ The commands are:
 }
 
 func cmdGroup() {
-	if len(os.Args) < 2 {
+	if len(os.Args) < 3 {
 		fatalf("must provide group ID\n")
 	}
 
@@ -105,7 +104,7 @@ func cmdUserMe() {
 }
 
 func cmdMessage() {
-	if len(os.Args) < 2 {
+	if len(os.Args) < 3 {
 		fatalf("must provide group ID\n")
 	}
 
@@ -125,7 +124,7 @@ func cmdMessage() {
 }
 
 func cmdMessages() {
-	if len(os.Args) < 2 {
+	if len(os.Args) < 3 {
 		fatalf("must provide group ID\n")
 	}
 
@@ -155,5 +154,6 @@ func getGroup(id string) *groupme.Group {
 }
 
 func fatalf(format string, v ...interface{}) {
-	log.Fatalf(format, v...)
+	fmt.Printf(format, v...)
+	os.Exit(1)
 }
