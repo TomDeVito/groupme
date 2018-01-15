@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"strings"
 
-	"code.google.com/p/go-uuid/uuid"
+	"github.com/pborman/uuid"
 )
 
 const apiUrl = "https://api.groupme.com/v3"
